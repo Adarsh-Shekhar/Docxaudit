@@ -1,0 +1,49 @@
+# Backend dependencies (Python 3.14)
+# NOTE: ranges for now; after first successful install we will `pip freeze`
+# into constraints.txt and pin exact versions (implementation-plan §1.4a).
+
+# Web framework
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.20
+pydantic>=2.9
+pydantic-settings>=2.6
+# Required by pydantic EmailStr (auth schemas)
+email-validator>=2.0
+
+# Database
+sqlalchemy>=2.0.36
+alembic>=1.14
+psycopg[binary]>=3.2
+
+# Auth
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+# passlib 1.7.4 is incompatible with bcrypt>=4.1 (bcrypt.__about__ removed);
+# pinned until passlib releases a fix — revisit to un-pin later.
+bcrypt==4.0.1
+
+# Document parsing
+pymupdf>=1.24
+python-docx>=1.1
+
+# Filtering / NLP
+spacy>=3.8
+dateparser>=1.2
+
+# Pipeline / LLM (API-only; no local LLM)
+langgraph>=0.2
+groq>=0.13
+httpx>=0.27
+
+# Email (Resend)
+resend>=2.0
+
+# Scheduler
+apscheduler>=3.10
+
+# Testing / quality
+pytest>=8.3
+pytest-asyncio>=0.24
+mypy>=1.13
+ruff>=0.8

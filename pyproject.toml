@@ -1,0 +1,30 @@
+# Repo-level tool config (mypy + ruff), referenced by CI (plan §1.7/2 Risks/Notes)
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend/app", "backend/tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "backend"
+files = ["backend/app"]
+# rules Part B: type hints on every function signature
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

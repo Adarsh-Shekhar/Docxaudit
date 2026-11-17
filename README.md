@@ -1,6 +1,6 @@
-# Plain-Language Obligation Tracker
+# Docxaudit
 
-Turns contract documents into verified, plain-language obligation reminders — with every extraction cited back to the exact page and character offset in the source document.
+Docxaudit turns legal contracts into plain-language, source-cited obligations. Users review, accept, edit, or reject them, with the tool highlighting the exact source text for verification.
 
 **Alerting, not daydreaming.** The pipeline flags candidate clauses → an LLM drafts summaries → a **human verifies every clause** before it becomes an obligation → obligations become owned, dated tasks with evidence, calendar, and email/in-app alerts.
 

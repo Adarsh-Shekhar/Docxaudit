@@ -26,11 +26,10 @@ jobs:
           ruff check backend
       - name: Type check (mypy)
         run: . .venv/bin/activate
-          mypy backend/app
+          mypy
       - name: Tests (pytest)
         run: . .venv/bin/activate
           pytest backend/tests -q
-        continue-on-error: true  # no tests yet — remove once tests exist
 
   frontend:
     runs-on: ubuntu-latest
@@ -50,4 +49,3 @@ jobs:
       - name: Tests (vitest)
         working-directory: frontend
         run: npm test
-        continue-on-error: true  # no tests yet — remove once tests exist

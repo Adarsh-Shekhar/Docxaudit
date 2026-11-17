@@ -27,6 +27,9 @@ bcrypt==4.0.1
 pymupdf>=1.24
 python-docx>=1.1
 
+# Citation verification (fuzzy span match)
+rapidfuzz>=3.10
+
 # Filtering / NLP
 spacy>=3.8
 dateparser>=1.2

@@ -5,7 +5,6 @@ Fail-fast on missing required vars. Secrets never hardcoded (rules Part B).
 from __future__ import annotations
 
 from functools import lru_cache
-from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -66,7 +65,3 @@ def get_settings() -> Settings:
     the ignore is load-bearing for the fail-fast required-vars pattern.
     """
     return Settings()  # type: ignore[call-arg]
-
-
-# Storage root is created lazily by the storage service in Phase 7.
-_STORAGE = Path(get_settings().storage_path)

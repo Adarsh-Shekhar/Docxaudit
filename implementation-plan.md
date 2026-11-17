@@ -138,9 +138,9 @@
 - [ ] 1.4a All backend dependencies are installed **only** into `.venv` (never globally): `.\.venv\Scripts\pip install -r backend/requirements.txt`. Commit the lock/pin file so CI recreates the same environment.
 - [x] 1.5 Frontend `package.json` → done 2026-11-03 (scripts + deps; npm resolved current versions, expected in package-lock.json after install).
 - [ ] 1.6 ~~`docker-compose.yml`~~ → **Removed (2026-11-03):** no Docker in v1; local dev uses the Neon dev database directly (0.1 decision). A `.env` `DATABASE_URL` pointing at Neon is all that's needed. (If containers are ever wanted, add docker-compose as a phase 36 stretch.)
-- [x] 1.7 GitHub Actions `ci.yml` → written 2026-11-03 (backend job: venv + pip + ruff + mypy + pytest; frontend job: npm ci + tsc + vitest). **Pending:** verify it runs green after the repo is pushed to GitHub (1.9).
+- [x] 1.7 GitHub Actions `ci.yml` → written 2026-11-03 (backend job: venv + pip + ruff + mypy + pytest; frontend job: npm ci + tsc + vitest). **Verified green 2026-11-17** after push to GitHub (1.9) — suites now gate the build.
 - [x] 1.8 Write a minimal `README.md` → done 2026-11-03 (project summary, .venv setup, .env vars, docs links).
-- [ ] 1.9 Initial commit + push; confirm CI runs (even if empty tests pass).
+- [x] 1.9 Initial commit + push; confirm CI runs (even if empty tests pass). *(done 2026-11-17: pushed to `github.com/Adarsh-Shekhar/Docxaudit` `main`; workflow tightened to enforce the real suites — pytest 82 + vitest 17, no more `continue-on-error` — and ran **green**)*
 
 **Deliverables:** Repo tree, CI pipeline green on empty project, `.env.example`.
 

@@ -10,7 +10,7 @@ import contextlib
 import re
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from app.core.deps import CurrentUser, DbSession
 from app.core.storage import StorageError, get_storage
 from app.models.document import Document
 from app.models.user import UserRole
+from app.pipeline.graph import ACTIVE_EXTRACTION_STATUSES, run_extraction
 from app.schemas.document import (
     MAX_UPLOAD_BYTES,
     SUPPORTED_MIME,
@@ -170,14 +171,40 @@ def delete_document(
 
 
 @router.post("/{document_id}/extract", response_model=ExtractionStatusResponse, status_code=status.HTTP_202_ACCEPTED)
-def trigger_extraction(document_id: uuid.UUID, user: CurrentUser, db: DbSession) -> ExtractionStatusResponse:
-    """Stub (Phase 7.3): accepts and returns 202; real LangGraph pipeline in Phase 12."""
-    _load_document_or_404(db, document_id, user)
+def trigger_extraction(
+    document_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    user: CurrentUser,
+    db: DbSession,
+) -> ExtractionStatusResponse:
+    """Enqueue the LangGraph pipeline (Phase 12.2) as a background task.
+
+    Concurrency guard (Phase 12.5): 409 with the current status if a run is
+    already active. Re-runs on completed/failed docs reset previous clauses
+    (Phase 12.4, handled inside `run_extraction`).
+    """
+    doc = _load_document_or_404(db, document_id, user)
+    if doc.extraction_status in ACTIVE_EXTRACTION_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": "Extraction already running", "current_status": doc.extraction_status},
+        )
+    doc.extraction_status = "queued"
+    doc.extraction_error = None
+    # Commit NOW: FastAPI dependency teardown (get_db) runs *after* background
+    # tasks, so a teardown-commit would clobber the task's terminal status.
+    db.commit()
+    background_tasks.add_task(run_extraction, doc.id)
     return ExtractionStatusResponse(status="queued")
 
 
 @router.get("/{document_id}/status", response_model=ExtractionStatusResponse)
 def extraction_status(document_id: uuid.UUID, user: CurrentUser, db: DbSession) -> ExtractionStatusResponse:
-    """Stub (Phase 7.3): `not_started` until Phase 12 adds the job table."""
-    _load_document_or_404(db, document_id, user)
-    return ExtractionStatusResponse(status="not_started")
+    """Live extraction job status from the Document row (Phase 12.3)."""
+    doc = _load_document_or_404(db, document_id, user)
+    progress = {"done": doc.extraction_progress_done, "total": doc.extraction_progress_total}
+    return ExtractionStatusResponse(
+        status=doc.extraction_status,
+        progress=progress,
+        error=doc.extraction_error,
+    )

@@ -26,10 +26,10 @@ class UploadResponse(DocumentResponse):
 
 
 class ExtractionStatusResponse(BaseModel):
-    """Extraction job status (Phase 7.3 stub; real pipeline lands Phase 12)."""
+    """Extraction job status (Phase 12)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    status: str  # not_started | queued | completed | failed (pipeline states in Phase 12)
-    progress: dict[str, int] | None = None
+    status: str  # not_started | queued | parsing | extracting | ... | completed | failed
+    progress: dict[str, int] | None = None  # {"done": n, "total": m}
     error: str | None = None

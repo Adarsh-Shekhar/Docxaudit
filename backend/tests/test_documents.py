@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -144,7 +145,12 @@ def test_filename_sanitized_for_storage_path(client: TestClient) -> None:
     assert up.json()["filename"] == "evil_name_.pdf"
 
 
-def test_extraction_stub_endpoints(client: TestClient) -> None:
+def test_extraction_endpoints_report_live_status(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.mock_llm import mock_provider
+
+    monkeypatch.setattr("app.pipeline.graph._resolve_provider", lambda explicit=None: mock_provider())
     token = _register(client, "owner@example.com", "Acme")
     doc = client.post(
         "/documents",
@@ -158,7 +164,11 @@ def test_extraction_stub_endpoints(client: TestClient) -> None:
 
     st = client.get(f"/documents/{doc['id']}/status", headers=_auth(token))
     assert st.status_code == 200
-    assert st.json()["status"] == "not_started"
+    body = st.json()
+    # Background task completed synchronously in the test client; the fake
+    # PDF has a text layer but the mock LLM handles whatever candidates exist.
+    assert body["status"] in {"completed", "failed"}
+    assert body["progress"] is None or set(body["progress"]) == {"done", "total"}
 
 
 def test_upload_empty_file_rejected(client: TestClient) -> None:

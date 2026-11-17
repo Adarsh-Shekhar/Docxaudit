@@ -464,14 +464,15 @@
 ---
 
 ### Phase 13 — Clauses API & Verification Endpoints
+> **Status (2026-11-17):** Done — `schemas/clause.py` (ClauseResponse with citation+confidence+status, ClauseUpdateRequest with strict action/payload validation, ClauseListResponse embedding `{reviewed, total}` progress FR-2.5); `api/clauses.py` — `GET /documents/{id}/clauses` (org-scoped, document order, members read-only) and `PATCH /clauses/{id}` (admin-only via `require_role`; accept/edit → exactly one `Obligation` with copied citation — the ONLY creation path, R-2; reject → none; audit logged; re-decide → 409 documented). 10 tests incl. re-extraction-resets-decisions interaction with Phase 12.
 **Implements:** FR-2.3, FR-2.4, TRD §5 Clauses
 **Milestone:** M1
 
 **Objective:** Expose extracted clauses and the accept/edit/reject actions — the only path by which an `Obligation` row may be created (R-2).
 
 **Tasks:**
-- [ ] 13.1 `schemas/clause.py`: `ClauseResponse` (includes citation, confidence, status), `ClauseUpdateRequest` (action: accept|edit|reject; edited `plain_language_text`/`obligation_type` optional).
-- [ ] 13.2 `api/clauses.py`:
+- [x] 13.1 `schemas/clause.py`: `ClauseResponse` (includes citation, confidence, status), `ClauseUpdateRequest` (action: accept|edit|reject; edited `plain_language_text`/`obligation_type` optional).
+- [x] 13.2 `api/clauses.py`:
   - `GET /documents/{id}/clauses`: list clauses for a document (org-scoped via document access check), including citation + confidence + status.
   - `PATCH /clauses/{id}`: apply action:
     - `accept`: create `Obligation` row from clause (copy citation_page/offset), set clause status `accepted`, audit log.
@@ -479,8 +480,8 @@
     - `reject`: set clause status `rejected`, no `Obligation` row, audit log.
   - Idempotency: re-accepting an already-accepted clause should be a no-op or return the existing obligation (decide and document; default: 409 if already decided).
   - Role guard: only `admin` (or a "verifier" role) may accept/edit/reject; members are read-only (FR-5.1). Document the role mapping.
-- [ ] 13.3 Progress helper: `GET /documents/{id}` (or clauses response) includes `{reviewed, total}` for the progress indicator (FR-2.5).
-- [ ] 13.4 Tests: accept creates exactly one Obligation; edit creates Obligation with edited values; reject creates none; member cannot accept (403); re-accept returns 409; org scoping.
+- [x] 13.3 Progress helper: `GET /documents/{id}` (or clauses response) includes `{reviewed, total}` for the progress indicator (FR-2.5).
+- [x] 13.4 Tests: accept creates exactly one Obligation; edit creates Obligation with edited values; reject creates none; member cannot accept (403); re-accept returns 409; org scoping.
 
 **Deliverables:** Clauses endpoints + role guards + tests.
 

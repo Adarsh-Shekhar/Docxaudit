@@ -37,12 +37,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    from app.api import auth, documents, orgs
+    from app.api import auth, clauses, documents, orgs
 
     app_.include_router(auth.router)
     app_.include_router(orgs.router)
     app_.include_router(orgs.users_router)
     app_.include_router(documents.router)
+    app_.include_router(clauses.router)
 
     @app_.get("/health", tags=["ops"])
     def health() -> dict[str, Any]:

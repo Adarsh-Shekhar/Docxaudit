@@ -411,20 +411,21 @@
 ---
 
 ### Phase 11 — Extraction Pipeline: Scoring & Citation (`score`, `cite`)
+> **Status (2026-11-17):** Done — composite formula `0.50·llm + 0.25·min(1, signals/4) + 0.25·citation_signal` (verified: 1.0 / unverified: 0.4), documented in `score.py`; rapidfuzz quote verification with whole-chunk fallback (unverified → lowered confidence, not dropped — R-4); `attach_citation` blocks invalid-offset chunks (R-5); DOCX `page_number=None` legitimate. 11 tests pass.
 **Implements:** TRD §3 Step 5–6; R-4, R-5
 **Milestone:** M1
 
 **Objective:** Compute a composite confidence (never trust LLM self-confidence alone) and verify/attach citations (page + char offsets) to every extraction; block uncitable clauses from surfacing (R-5).
 
 **Tasks:**
-- [ ] 11.1 `pipeline/score.py`:
+- [x] 11.1 `pipeline/score.py`:
   - Composite confidence = weighted blend of: LLM self-confidence, rule-based signal (e.g., did filter find an explicit date? +bonus; did filter match multiple keywords? +bonus), and a citation-verification signal (see 11.2).
   - Clamp to [0,1]; store as `confidence_score` on `ExtractedClause`.
   - Document the exact formula and weights in code comments + a short doc section.
-- [ ] 11.2 Citation verification: the LLM is asked to quote the source span it extracted from. After extraction, fuzzy-match the quoted span back to the original chunk text (e.g., `difflib`/rapidfuzz) to confirm it exists; record the matched offset range. If no match above threshold, mark citation as unverified and lower confidence; if the chunk has only one plausible span, use it.
-- [ ] 11.3 `pipeline/cite.py` (or fold into score): attach `page_number`, `char_start`, `char_end` from the source chunk to the `ExtractedClause`. If offset data is missing/invalid, raise/block — never persist a clause without citation (R-5).
-- [ ] 11.4 Low-confidence handling: store the score; UI decides display (Phase 18). Pipeline never drops a candidate based on score (R-4).
-- [ ] 11.5 Unit tests: composite score within [0,1]; citation verification matches a known quote; uncitable clause raises/blocked.
+- [x] 11.2 Citation verification: the LLM is asked to quote the source span it extracted from. After extraction, fuzzy-match the quoted span back to the original chunk text (e.g., `difflib`/rapidfuzz) to confirm it exists; record the matched offset range. If no match above threshold, mark citation as unverified and lower confidence; if the chunk has only one plausible span, use it.
+- [x] 11.3 `pipeline/cite.py` (or fold into score): attach `page_number`, `char_start`, `char_end` from the source chunk to the `ExtractedClause`. If offset data is missing/invalid, raise/block — never persist a clause without citation (R-5).
+- [x] 11.4 Low-confidence handling: store the score; UI decides display (Phase 18). Pipeline never drops a candidate based on score (R-4).
+- [x] 11.5 Unit tests: composite score within [0,1]; citation verification matches a known quote; uncitable clause raises/blocked.
 
 **Deliverables:** Scoring + citation verification + tests.
 
@@ -437,19 +438,20 @@
 ---
 
 ### Phase 12 — LangGraph Orchestration & Async Job Handling
+> **Status (2026-11-17):** Done — `pipeline/graph.py` (TypedDict state, parse→filter→extract→score/persist, conditional error edge); FastAPI `BackgroundTasks` execution (in-process limitation documented); `Document.extraction_status/progress/error` fields + migration `20b73d387efb` (round-trip tested); `POST /extract` enqueues + 409 guard, `GET /status` returns live `{status, progress, error}`; transactional `persist_node` (all-or-nothing); re-run resets clauses. Notable gotcha fixed: `get_db` teardown commit runs *after* background tasks — the endpoint commits `queued` explicitly so the task's terminal status isn't clobbered. 7 graph tests pass.
 **Implements:** FR-1.6, TRD §3 (LangGraph), §5 Documents (extract/status)
 **Milestone:** M1
 
 **Objective:** Wire parse → filter → extract → score → cite into a stateful LangGraph graph, run it asynchronously, and expose status polling — so the UI can show progress and a hung job can't block the request queue.
 
 **Tasks:**
-- [ ] 12.1 `pipeline/graph.py`: define a `TypedDict` state (`document_id`, `chunks`, `candidates`, `extractions`, `errors`, `status`). Nodes: `parse_node`, `filter_node`, `extract_node` (iterates candidates, calls LLM per candidate with timeout), `score_node`, `cite_node`, `persist_node`. Conditional edges: route low-confidence extractions to a "flag" path (visual flag in UI) — same data, different metadata; on any node exception, route to `error_node` which marks document `extraction_failed`.
-- [ ] 12.2 Async execution: run the graph in a background task (FastAPI `BackgroundTasks` for v1, or a simple in-process queue). Document the limitation: in-process jobs die if the process restarts; acceptable for capstone scale. (Celery/Redis is out of scope — C-1/C-3.)
-- [ ] 12.3 Status tracking: add an `extraction_status` field to `Document` (or a separate `ExtractionJob` table): `not_started | queued | parsing | filtering | extracting | scoring | completed | failed`. Update as the graph progresses. `GET /documents/{id}/status` returns `{status, progress: {done, total}, error?}`.
-- [ ] 12.4 `POST /documents/{id}/extract`: enqueue job, return 202 with job status; idempotency — if already running/completed, return current status (or allow re-run which resets clauses).
-- [ ] 12.5 Concurrency guard: don't run two extractions on the same document simultaneously (lock via DB status check).
-- [ ] 12.6 Persist `ExtractedClause` rows only at `persist_node`, with full citation data. On failure, leave document in `failed` state with error message; don't partially persist (transactional).
-- [ ] 12.7 Tests: enqueue extraction on synthetic doc → status reaches `completed`; mock LLM failure → status `failed` with message; re-run resets clauses; concurrent calls don't duplicate.
+- [x] 12.1 `pipeline/graph.py`: define a `TypedDict` state (`document_id`, `chunks`, `candidates`, `extractions`, `errors`, `status`). Nodes: `parse_node`, `filter_node`, `extract_node` (iterates candidates, calls LLM per candidate with timeout), `score_node`, `cite_node`, `persist_node`. Conditional edges: route low-confidence extractions to a "flag" path (visual flag in UI) — same data, different metadata; on any node exception, route to `error_node` which marks document `extraction_failed`.
+- [x] 12.2 Async execution: run the graph in a background task (FastAPI `BackgroundTasks` for v1, or a simple in-process queue). Document the limitation: in-process jobs die if the process restarts; acceptable for capstone scale. (Celery/Redis is out of scope — C-1/C-3.)
+- [x] 12.3 Status tracking: add an `extraction_status` field to `Document` (or a separate `ExtractionJob` table): `not_started | queued | parsing | filtering | extracting | scoring | completed | failed`. Update as the graph progresses. `GET /documents/{id}/status` returns `{status, progress: {done, total}, error?}`.
+- [x] 12.4 `POST /documents/{id}/extract`: enqueue job, return 202 with job status; idempotency — if already running/completed, return current status (or allow re-run which resets clauses).
+- [x] 12.5 Concurrency guard: don't run two extractions on the same document simultaneously (lock via DB status check).
+- [x] 12.6 Persist `ExtractedClause` rows only at `persist_node`, with full citation data. On failure, leave document in `failed` state with error message; don't partially persist (transactional).
+- [x] 12.7 Tests: enqueue extraction on synthetic doc → status reaches `completed`; mock LLM failure → status `failed` with message; re-run resets clauses; concurrent calls don't duplicate.
 
 **Deliverables:** LangGraph pipeline + async jobs + status polling + tests.
 

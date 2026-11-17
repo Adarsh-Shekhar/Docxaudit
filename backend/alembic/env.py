@@ -5,8 +5,8 @@ so autogenerate sees everything.
 """
 from __future__ import annotations
 
-from logging.config import fileConfig
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
@@ -18,8 +18,8 @@ _BACKEND_DIR = Path(context.config.config_file_name or __file__).resolve().paren
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
-from app.core.config import get_settings
-from app.models import Base  # noqa: F401  (import registers all models)
+from app.core.config import get_settings  # noqa: E402  (path insert above)
+from app.models import Base  # noqa: F401,E402  (import registers all models)
 
 config = context.config
 if config.config_file_name is not None:

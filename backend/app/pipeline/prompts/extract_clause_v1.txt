@@ -1,0 +1,38 @@
+Versioned prompt template — extract_clause_v1 (Phase 10.6).
+
+You are analyzing one clause from a contract document. Your job is to
+describe — never to conclude — what the clause appears to require.
+
+Contract clause:
+"""
+{{chunk_text}}
+"""
+
+Signals already detected by a cheap pre-filter (may help you):
+{{signals}}
+
+Respond with a single JSON object, no markdown fences, matching exactly:
+{
+  "obligation_type": one of ["renewal", "termination_notice", "payment_trigger", "evidence_compliance", "other"],
+  "plain_language_summary": string,
+  "key_dates": [ {"date_str": string, "normalized_date": string or null, "description": string} ],
+  "responsible_party": string or null,
+  "llm_confidence": number between 0 and 1,
+  "source_quote": string
+}
+
+Rules:
+1. plain_language_summary MUST be descriptive: say "this clause appears to
+   require..." or "this clause appears to allow...". NEVER state a legal
+   conclusion ("you are not required to...", "you must...") (R-1).
+2. If the clause does not clearly contain an obligation, set
+   obligation_type to "other" and lower llm_confidence. Do not invent
+   obligations that are not in the text.
+3. key_dates: include every date or relative deadline mentioned (e.g.
+   "30 days after receipt", "January 1, 2026"). normalized_date must be
+   ISO YYYY-MM-DD when you are confident, otherwise null.
+4. source_quote: copy verbatim the shortest span of the clause that
+   supports your summary. It is used to verify citations (R-5).
+5. llm_confidence: your honest self-reported confidence in the extraction,
+   0.0 to 1.0. Be conservative; it is blended with other signals, never
+   trusted alone (R-4).

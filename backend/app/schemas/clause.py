@@ -29,6 +29,8 @@ class ClauseResponse(BaseModel):
     confidence_score: float
     status: str  # pending | accepted | edited | rejected
     created_at: datetime
+    # Highlight box in PDF points (Phase 17.2); None for DOCX.
+    bbox: dict[str, float] | None = None
 
 
 class ReviewProgress(BaseModel):

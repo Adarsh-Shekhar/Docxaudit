@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
@@ -60,6 +60,10 @@ class ExtractedClause(Base):
         nullable=False,
         default=ClauseStatus.PENDING,
     )
+
+    # Visual highlight box in PDF points (Phase 17.2 decision: stored at
+    # parse time from PyMuPDF). None for DOCX or unlocatable spans.
+    bbox: Mapped[dict[str, float | int] | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

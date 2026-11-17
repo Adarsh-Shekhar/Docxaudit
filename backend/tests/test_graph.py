@@ -217,3 +217,54 @@ def test_unverifiable_quote_still_persists_with_whole_chunk_fallback(
 
     clauses = db_session.scalars(select(ExtractedClause)).all()
     assert len(clauses) >= 1  # R-4/R-5: not dropped, just lowered
+
+
+# ── Phase 17: bbox + text view ───────────────────────────────────────────────
+
+def test_pdf_clauses_carry_bbox_and_text_view_offsets_match(
+    client: TestClient, db_session: Session, patched_provider: object
+) -> None:
+    token = _register(client, "bbox-owner@example.com")
+    doc = _upload(client, token, build_synthetic_pdf_bytes(), "application/pdf")
+
+    _extract(client, token, str(doc["id"]))
+
+    clauses = db_session.scalars(select(ExtractedClause)).all()
+    assert len(clauses) >= 1
+    for clause in clauses:
+        assert clause.bbox is not None
+        box = clause.bbox
+        assert box["x0"] < box["x1"] and box["y0"] < box["y1"]  # type: ignore[typeddict-item]
+        assert box["x0"] >= 0 and box["y0"] >= 0  # type: ignore[typeddict-item]
+
+    listed = client.get(
+        f"/documents/{doc['id']}/clauses",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+    for clause in listed["clauses"]:
+        assert clause["bbox"] is not None
+
+    # Text view: citation offsets must index into exactly this string.
+    text_resp = client.get(f"/documents/{doc['id']}/text", headers={"Authorization": f"Bearer {token}"})
+    assert text_resp.status_code == 200
+    text = text_resp.json()["text"]
+    for clause in listed["clauses"]:
+        assert text[clause["char_start"] : clause["char_end"]] != ""
+        assert text[clause["char_start"] : clause["char_end"]].strip() != ""
+
+
+def test_docx_text_view_serves_paragraph_text(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.pipeline.graph._resolve_provider", lambda explicit=None: mock_provider())
+    token = _register(client, "textview-owner@example.com")
+    doc = _upload(
+        client,
+        token,
+        build_synthetic_docx_bytes(),
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+    resp = client.get(f"/documents/{doc['id']}/text", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert "Synthetic Services Agreement" in resp.json()["text"]
+    assert "renews automatically" in resp.json()["text"]

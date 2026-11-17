@@ -19,10 +19,12 @@ from app.core.storage import StorageError, get_storage
 from app.models.document import Document
 from app.models.user import UserRole
 from app.pipeline.graph import ACTIVE_EXTRACTION_STATUSES, run_extraction
+from app.pipeline.parse import NoTextLayerError
 from app.schemas.document import (
     MAX_UPLOAD_BYTES,
     SUPPORTED_MIME,
     DocumentResponse,
+    DocumentTextResponse,
     ExtractionStatusResponse,
 )
 
@@ -168,6 +170,36 @@ def delete_document(
         details={"filename": doc.filename, "version": doc.version},
     )
     db.delete(doc)
+
+
+@router.get("/{document_id}/text", response_model=DocumentTextResponse)
+def get_document_text(document_id: uuid.UUID, user: CurrentUser, db: DbSession) -> DocumentTextResponse:
+    """Full extracted text (Phase 17.4): the DOCX text view (and PDF fallback)
+    renders this with inline highlights — the citation offsets point into
+    exactly this string (see `parse.extract_full_text`).
+
+    Parsing is deterministic, so offsets are stable across calls; no LLM.
+    """
+    from app.pipeline.parse import extract_full_text, parse_docx, parse_pdf
+
+    doc = _load_document_or_404(db, document_id, user)
+    try:
+        data = get_storage().read(doc.storage_path)
+        if doc.mime_type.endswith("pdf"):
+            chunks = parse_pdf(data)
+        elif "wordprocessingml" in doc.mime_type:
+            chunks = parse_docx(data)
+        else:
+            raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported file type")
+    except NoTextLayerError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return DocumentTextResponse(
+        filename=doc.filename,
+        mime_type=doc.mime_type,
+        text=extract_full_text(chunks),
+    )
 
 
 @router.post("/{document_id}/extract", response_model=ExtractionStatusResponse, status_code=status.HTTP_202_ACCEPTED)

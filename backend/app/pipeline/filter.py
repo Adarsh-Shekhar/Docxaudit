@@ -99,8 +99,12 @@ def _parse_notice_days(text: str) -> int | None:
     return _NUMBER_WORDS.get(number.lower())
 
 
-def is_candidate_chunk(text: str, *, min_signals: int = 1) -> FilterSignals:
+def is_candidate_chunk(text: str, *, min_signals: int | None = None) -> FilterSignals:
     """Decide candidate status via keyword + regex + DATE-NER signals (§9.1)."""
+    if min_signals is None:
+        from app.core.config import get_settings
+
+        min_signals = get_settings().filter_min_signals
     lowered = text.lower()
     matched: list[str] = []
 
@@ -133,10 +137,16 @@ def is_candidate_chunk(text: str, *, min_signals: int = 1) -> FilterSignals:
 def filter_chunks(
     chunks: list[Chunk],
     *,
-    min_signals: int = 1,
+    min_signals: int | None = None,
 ) -> tuple[list[FilteredChunk], FilterStats]:
     """Annotate every chunk (Phase 9.2 keeps non-candidates in the output list
-    for the optional 'full scan' mode; only candidates reach the LLM)."""
+    for the optional 'full scan' mode; only candidates reach the LLM).
+
+    `min_signals` defaults to `FILTER_MIN_SIGNALS` from env (Phase 9.3)."""
+    if min_signals is None:
+        from app.core.config import get_settings
+
+        min_signals = get_settings().filter_min_signals
     stats = FilterStats(total_chunks=len(chunks))
     results: list[FilteredChunk] = []
     for chunk in chunks:
@@ -150,7 +160,7 @@ def filter_chunks(
     return results, stats
 
 
-def candidate_chunks(chunks: list[Chunk], *, min_signals: int = 1) -> list[FilteredChunk]:
+def candidate_chunks(chunks: list[Chunk], *, min_signals: int | None = None) -> list[FilteredChunk]:
     """Convenience: only the chunks that will be sent to the LLM."""
     results, _ = filter_chunks(chunks, min_signals=min_signals)
     return [fc for fc in results if fc.signals.is_candidate]

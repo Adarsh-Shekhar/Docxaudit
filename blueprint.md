@@ -68,12 +68,12 @@ Each phase has an explicit **Definition of Done** — don't start the next phase
 ### Phase 0 — Foundations
 **Implements:** infrastructure baseline, FR-5.1/FR-5.2
 
-- [ ] Scaffold `backend/` (FastAPI) and `frontend/` (React + Vite) per the structure above *(backend skeleton + models + auth done 2026-11-03; frontend React app source pending — manifest/deps installed)*
+- [ ] Scaffold `backend/` (FastAPI) and `frontend/` (React + Vite) per the structure above *(backend skeleton + models + auth + documents + parse/filter/extract pipeline done; frontend React app source pending — manifest/deps installed)*
 - [ ] ~~`docker-compose.yml` for local Postgres~~ → removed (2026-11-03): local dev uses a Neon dev database directly; no Docker
 - [ ] GitHub repo + Actions CI (lint + test stub) *(ci.yml written; must be pushed to GitHub to verify green — pending user)*
 - [x] `Organization` and `User` models + Alembic migration *(full 9-table initial migration `cc9a63fd79ed`, rollback-tested 2026-11-03)*
 - [x] Register/login/JWT auth (`TRD.md` Section 2.2) *(15 backend tests pass on 2026-11-03)*
-- [ ] Deploy skeleton end-to-end: frontend on Vercel, backend on Render, DB on Neon — prove the whole zero-cost pipeline works *before* building features on top of it *(= plan Phase 6, pending user accounts/keys)*
+- [ ] Deploy skeleton end-to-end: frontend on Vercel, backend on Render, DB on Neon — prove the whole zero-cost pipeline works *before* building features on top of it *(= plan Phase 6, blocked on user accounts/keys; guide at `docs/deployment.md`)*
 
 **Definition of Done:** A deployed, empty app where you can register, log in, and see a blank authenticated dashboard, entirely on free-tier infrastructure.
 

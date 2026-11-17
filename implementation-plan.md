@@ -267,6 +267,7 @@
 ---
 
 ### Phase 6 — Deployment Skeleton (Zero-Cost Pipeline Proof)
+> **Status (2026-11-17):** `docs/deployment.md` written (step-by-step for Neon + Render + Vercel, env var list, warm-up checklist). **All deploy tasks blocked on user accounts/keys** (GitHub repo, Neon `DATABASE_URL`, Render, Vercel). Resume with `docs/deployment.md` §1–4.
 **Implements:** TRD §7; blueprint Phase 0 last item
 **Milestone:** M0 (gate before feature work)
 
@@ -292,25 +293,26 @@
 ---
 
 ### Phase 7 — Document Ingestion & Storage (Backend)
+> **Status (2026-11-17):** Done — storage abstraction (local disk, R2 stub), upload/list/get/content/delete endpoints, versioning via `replaces_document_id`, sanitized filenames, org-scoped 404s, extraction stubs (202/not_started). 10 endpoint tests pass.
 **Implements:** FR-1.1, FR-1.6 (async), TRD §5 Documents
 **Milestone:** M1
 
 **Objective:** Accept PDF/DOCX uploads, store them, create `Document` rows, and reject unsupported formats with a clear error — with org scoping and access checks.
 
 **Tasks:**
-- [ ] 7.1 `core/storage.py`: abstraction with two implementations — `LocalStorage` (dev) and `R2Storage` (prod, optional). Interface: `save(file, path) -> storage_path`, `read(path) -> bytes`, `delete(path)`. Default to local disk (TRD §2.4).
-- [ ] 7.2 `schemas/document.py`: `DocumentResponse`, `UploadResponse`.
-- [ ] 7.3 `api/documents.py`:
+- [x] 7.1 `core/storage.py`: abstraction with two implementations — `LocalStorage` (dev) and `R2Storage` (prod, optional). Interface: `save(file, path) -> storage_path`, `read(path) -> bytes`, `delete(path)`. Default to local disk (TRD §2.4).
+- [x] 7.2 `schemas/document.py`: `DocumentResponse`, `UploadResponse`.
+- [x] 7.3 `api/documents.py`:
   - `POST /documents` (multipart upload): validate MIME type (PDF/DOCX only) → 415 on unsupported; size limit (e.g., 25 MB); save file; create `Document` row (version=1); return document metadata.
   - `GET /documents` (list org's documents).
   - `GET /documents/{id}` (metadata; access-checked).
   - `DELETE /documents/{id}` (admin or uploader; cascade-delete extracted clauses/obligations? Decide: block delete if verified obligations exist, or soft-delete — document the decision; default: hard delete cascades, with audit log entry).
   - `POST /documents/{id}/extract` (trigger pipeline — implemented in Phase 12; stub returns 202 here).
   - `GET /documents/{id}/status` (extraction status — implemented in Phase 12; stub returns `{status: "not_started"}`).
-- [ ] 7.4 Version handling for re-upload (US-8): `POST /documents` accepts optional `replaces_document_id`; if provided, increment version, mark old as superseded (add `superseded_by` nullable FK or a `status` field). For v1 simplest: create a new Document with version+1 and link via `parent_document_id` nullable. Document the approach.
-- [ ] 7.5 File storage path convention: `{org_id}/{document_id}/v{version}/{filename}` — never trust client filename for path; sanitize.
-- [ ] 7.6 Access check on every document endpoint: load Document, verify `organization_id == current_user.organization_id` else 404.
-- [ ] 7.7 Tests: upload PDF/DOCX succeeds; unsupported format → 415; cross-org access → 404; delete cascades; version increment on re-upload.
+- [x] 7.4 Version handling for re-upload (US-8): `POST /documents` accepts optional `replaces_document_id`; if provided, increment version, mark old as superseded (add `superseded_by` nullable FK or a `status` field). For v1 simplest: create a new Document with version+1 and link via `parent_document_id` nullable. Document the approach.
+- [x] 7.5 File storage path convention: `{org_id}/{document_id}/v{version}/{filename}` — never trust client filename for path; sanitize.
+- [x] 7.6 Access check on every document endpoint: load Document, verify `organization_id == current_user.organization_id` else 404.
+- [x] 7.7 Tests: upload PDF/DOCX succeeds; unsupported format → 415; cross-org access → 404; delete cascades; version increment on re-upload.
 
 **Deliverables:** Document upload/list/get/delete endpoints + storage abstraction + tests.
 
@@ -323,20 +325,21 @@
 ---
 
 ### Phase 8 — Extraction Pipeline: Parsing (`parse.py`)
+> **Status (2026-11-17):** Done — offset-preserving PDF/DOCX parsing; chunks absorb trailing separators so `"".join(chunks) == full text` exactly; numbered-clause + blank-line paragraph boundaries; `NoTextLayerError` for scanned PDFs; synthetic fixture generator + 9 parse tests pass.
 **Implements:** FR-1.2, TRD §3 Step 1–2
 **Milestone:** M1
 
 **Objective:** Extract raw text from PDF/DOCX with page number and character-offset metadata preserved, so every later step can cite exactly.
 
 **Tasks:**
-- [ ] 8.1 `pipeline/parse.py`:
+- [x] 8.1 `pipeline/parse.py`:
   - `parse_pdf(file_bytes) -> list[Chunk]` using PyMuPDF: iterate pages, extract text with `get_text("dict")` or `get_text()` preserving offsets; record `page_number`, `char_start`, `char_end` (global offset across the document) and `raw_text`.
   - `parse_docx(file_bytes) -> list[Chunk]` using python-docx: iterate paragraphs (and tables if present), assign page numbers as best-effort (DOCX has no native page breaks without rendering — document this limitation; use paragraph index as a fallback locator and record `page_number=None` or estimated). Record offsets.
   - `Chunk` dataclass: `text`, `page_number` (int | None), `char_start`, `char_end`, `document_id`.
-- [ ] 8.2 Chunking strategy: paragraph/clause-level chunks (TRD §3 Step 2). Split on blank lines / paragraph boundaries; keep each chunk's offsets contiguous and non-overlapping. Avoid splitting mid-sentence where possible.
-- [ ] 8.3 Handle edge cases: empty document, scanned/image PDF (no text layer) → raise a typed `NoTextLayerError` so the API can return a clear message (OCR is out of scope, C-7).
-- [ ] 8.4 Unit tests with synthetic PDF/DOCX fixtures (never real contracts): assert offsets reconstruct the original text when concatenated; assert page numbers correct for a multi-page PDF.
-- [ ] 8.5 Test fixture generation script (create a small synthetic contract PDF/DOCX with known clauses) committed under `tests/fixtures/` — synthetic only (C-8, R-3).
+- [x] 8.2 Chunking strategy: paragraph/clause-level chunks (TRD §3 Step 2). Split on blank lines / paragraph boundaries; keep each chunk's offsets contiguous and non-overlapping. Avoid splitting mid-sentence where possible.
+- [x] 8.3 Handle edge cases: empty document, scanned/image PDF (no text layer) → raise a typed `NoTextLayerError` so the API can return a clear message (OCR is out of scope, C-7).
+- [x] 8.4 Unit tests with synthetic PDF/DOCX fixtures (never real contracts): assert offsets reconstruct the original text when concatenated; assert page numbers correct for a multi-page PDF.
+- [x] 8.5 Test fixture generation script (create a small synthetic contract PDF/DOCX with known clauses) committed under `tests/fixtures/` — synthetic only (C-8, R-3).
 
 **Deliverables:** `parse.py` with offset-preserving parsing for PDF + DOCX + tests.
 
@@ -349,22 +352,23 @@
 ---
 
 ### Phase 9 — Extraction Pipeline: Candidate Filtering (`filter.py`)
+> **Status (2026-11-17):** Done — keywords + 7 regex date/amount patterns + spaCy DATE NER; `FILTER_MIN_SIGNALS` env-tunable; zero false negatives on the obligation sentence set; text-free `FilterStats` histogram. 9 tests pass. **spaCy model `en_core_web_sm` installed in `.venv`.**
 **Implements:** FR-1.3, TRD §3 Step 3
 **Milestone:** M1
 
 **Objective:** Cheap, CPU-only pre-filter that flags chunks likely to contain an obligation, so LLM calls stay under Groq's free-tier ceiling (C-5). This step is mandatory — do not remove it to "simplify."
 
 **Tasks:**
-- [ ] 9.1 `pipeline/filter.py`:
+- [x] 9.1 `pipeline/filter.py`:
   - Load spaCy model (`en_core_web_sm`) at startup; document install step (`python -m spacy download en_core_web_sm`) in README/setup.
   - Keyword/phrase matching (case-insensitive): "renew", "renewal", "terminate", "termination", "notice", "shall", "must", "obligation", "comply", "certificate", "insurance", "payment", "due", "expiration", "expire".
   - Regex patterns: date patterns (via `dateparser` + regex for explicit dates like "January 1, 2026", "30 days", "90 days' notice"), notice-period patterns ("\d+\s*days?\s*(notice|prior)"), monetary amounts, recurring terms ("annual", "quarterly", "monthly").
   - spaCy NER: extract DATE entities; flag chunks containing DATE + obligation keyword.
   - Output: each chunk annotated with `is_candidate: bool`, `matched_signals: list[str]`, `extracted_dates: list[str]` (raw strings, not yet normalized), `notice_period_days: int | None`.
-- [ ] 9.2 Keep all chunks (including non-candidates) available for an optional "full scan" mode, but default pipeline only sends candidates to the LLM. Non-candidates are stored as `ExtractedClause`? No — non-candidates are simply not extracted; but the UI should allow a user to trigger re-extraction with a lower threshold if they suspect a miss (R-4: never silently drop; low confidence is about display, but a non-candidate is a filtering decision — document this tension and provide a "re-scan with broader filter" escape hatch).
-- [ ] 9.3 Make filter thresholds configurable via env/settings (not hardcoded), so accuracy can be tuned without code changes.
-- [ ] 9.4 Unit tests: known obligation sentences → candidate=true; boilerplate sentences → candidate=false (or true but low signal); date extraction correctness on synthetic examples.
-- [ ] 9.5 Log (at INFO, no document text) the number of chunks vs. candidates per document for observability.
+- [x] 9.2 Keep all chunks (including non-candidates) available for an optional "full scan" mode, but default pipeline only sends candidates to the LLM. Non-candidates are stored as `ExtractedClause`? No — non-candidates are simply not extracted; but the UI should allow a user to trigger re-extraction with a lower threshold if they suspect a miss (R-4: never silently drop; low confidence is about display, but a non-candidate is a filtering decision — document this tension and provide a "re-scan with broader filter" escape hatch).
+- [x] 9.3 Make filter thresholds configurable via env/settings (not hardcoded), so accuracy can be tuned without code changes.
+- [x] 9.4 Unit tests: known obligation sentences → candidate=true; boilerplate sentences → candidate=false (or true but low signal); date extraction correctness on synthetic examples.
+- [x] 9.5 Log (at INFO, no document text) the number of chunks vs. candidates per document for observability.
 
 **Deliverables:** `filter.py` + configurable thresholds + tests.
 
@@ -377,23 +381,24 @@
 ---
 
 ### Phase 10 — Extraction Pipeline: LLM Extraction (`extract.py`)
+> **Status (2026-11-17):** Done (API-only) — provider-agnostic `extract_clause` behind `LLM_PROVIDER` (groq | gemini); versioned prompt `extract_clause_v1.txt`; 30s timeout, 3-retry exponential backoff on 429/5xx/timeout, typed `ExtractionFailedError`; 10 mock-provider tests pass; parse→filter→extract smoke runs end-to-end. **Live Groq/Gemini calls pending user API keys.**
 **Implements:** FR-1.4, FR-1.5, TRD §3 Step 4; rules Part B (LLM interface)
 **Milestone:** M1
 
 **Objective:** Call the LLM behind a single provider-agnostic interface to produce structured extraction output (obligation type, plain-language summary, key dates, responsible party if inferable, self-reported confidence) from each candidate chunk.
 
 **Tasks:**
-- [ ] 10.1 Define `ExtractionResult` Pydantic model: `obligation_type` (enum: renewal, termination_notice, payment_trigger, evidence_compliance, other), `plain_language_summary` (str), `key_dates` (list of `{date_str, normalized_date?, description}`), `responsible_party` (str | None), `llm_confidence` (float 0–1), `raw_llm_output` (str, for debugging, never logged in full per R-3).
-- [ ] 10.2 `pipeline/extract.py` — provider-agnostic interface:
+- [x] 10.1 Define `ExtractionResult` Pydantic model: `obligation_type` (enum: renewal, termination_notice, payment_trigger, evidence_compliance, other), `plain_language_summary` (str), `key_dates` (list of `{date_str, normalized_date?, description}`), `responsible_party` (str | None), `llm_confidence` (float 0–1), `raw_llm_output` (str, for debugging, never logged in full per R-3).
+- [x] 10.2 `pipeline/extract.py` — provider-agnostic interface:
   - `extract_clause(chunk_text: str, signals: FilterSignals) -> ExtractionResult`
   - Internally dispatches to configured provider: `groq`, `gemini`. Selected via env `LLM_PROVIDER`. (No local/Ollama provider — API-only.)
-- [ ] 10.3 Groq implementation: use `groq` SDK (or httpx); model from env `GROQ_MODEL` (default Llama 3.3 70B); structured output via JSON mode / function calling; timeout (e.g., 30s) with defined failure behavior.
-- [ ] 10.4 Gemini fallback implementation: Google GenAI SDK; model `gemini-flash` (or current Flash).
-- [ ] 10.5 (Removed) No local/Ollama provider — all inference is API-based (Groq/Gemini). If a privacy-preserving local path is ever needed, it is a future, opt-in addition, not part of v1.
-- [ ] 10.6 Prompt template file: `backend/app/pipeline/prompts/extract_clause_v1.txt` (versioned). Prompt requests JSON matching `ExtractionResult`; instructs the model to phrase output descriptively ("this clause appears to require…"), never as legal conclusions (R-1); asks for a confidence; requires citing by quoting the source span (used for offset verification in Phase 11).
-- [ ] 10.7 Retry logic: on transient errors (429, 5xx, timeout), retry up to N times with exponential backoff; on persistent failure, raise typed `ExtractionFailedError` and mark document "extraction failed, retry" (TRD §6 Reliability). Never let a hung call block the queue (rules Part B).
-- [ ] 10.8 Rate-limit awareness: add a small delay/backoff between calls if needed; never exceed configured concurrency. Document Groq's ~30 req/min (C-5).
-- [ ] 10.9 Unit tests: mock the LLM provider; assert `extract_clause` returns a valid `ExtractionResult`; assert timeout/failure path marks document failed (not crash).
+- [x] 10.3 Groq implementation (code complete; live verification pending GROQ_API_KEY): use `groq` SDK (or httpx); model from env `GROQ_MODEL` (default Llama 3.3 70B); structured output via JSON mode / function calling; timeout (e.g., 30s) with defined failure behavior.
+- [x] 10.4 Gemini fallback implementation (code complete; live verification pending GEMINI_API_KEY): Google GenAI SDK; model `gemini-flash` (or current Flash).
+- [x] 10.5 (Removed) No local/Ollama provider — all inference is API-based (Groq/Gemini). If a privacy-preserving local path is ever needed, it is a future, opt-in addition, not part of v1.
+- [x] 10.6 Prompt template file: `backend/app/pipeline/prompts/extract_clause_v1.txt` (versioned). Prompt requests JSON matching `ExtractionResult`; instructs the model to phrase output descriptively ("this clause appears to require…"), never as legal conclusions (R-1); asks for a confidence; requires citing by quoting the source span (used for offset verification in Phase 11).
+- [x] 10.7 Retry logic: on transient errors (429, 5xx, timeout), retry up to N times with exponential backoff; on persistent failure, raise typed `ExtractionFailedError` and mark document "extraction failed, retry" (TRD §6 Reliability). Never let a hung call block the queue (rules Part B).
+- [x] 10.8 Rate-limit awareness: add a small delay/backoff between calls if needed; never exceed configured concurrency. Document Groq's ~30 req/min (C-5).
+- [x] 10.9 Unit tests: mock the LLM provider; assert `extract_clause` returns a valid `ExtractionResult`; assert timeout/failure path marks document failed (not crash).
 
 **Deliverables:** `extract.py` + versioned prompt template + provider implementations + tests.
 

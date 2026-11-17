@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     storage_path: str = Field(default="./uploads", alias="STORAGE_PATH")
     frontend_origin: str = Field(default="http://localhost:5173", alias="FRONTEND_ORIGIN")
 
+    # Candidate filter tuning (Phase 9.3 — accuracy lever, never hardcoded)
+    filter_min_signals: int = Field(default=1, alias="FILTER_MIN_SIGNALS")
+
     def sqlalchemy_url(self) -> str:
         """Return a SQLAlchemy-engine-ready URL (Phase 0/1 decision: no Docker).
 

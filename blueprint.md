@@ -68,7 +68,7 @@ Each phase has an explicit **Definition of Done** — don't start the next phase
 ### Phase 0 — Foundations
 **Implements:** infrastructure baseline, FR-5.1/FR-5.2
 
-- [ ] Scaffold `backend/` (FastAPI) and `frontend/` (React + Vite) per the structure above *(backend through Phase 13 done: skeleton, auth, documents, full LangGraph pipeline, clauses/review API with Obligation creation — frontend React app source pending — manifest/deps installed)*
+- [ ] Scaffold `backend/` (FastAPI) and `frontend/` (React + Vite) per the structure above *(all backend phases 2–13 done; frontend Phases 14–17 done: routing + auth + documents + review viewer with bbox highlights — Phases 18+ (verification UI, obligations, tasks, calendar) pending)*
 - [ ] ~~`docker-compose.yml` for local Postgres~~ → removed (2026-11-03): local dev uses a Neon dev database directly; no Docker
 - [ ] GitHub repo + Actions CI (lint + test stub) *(ci.yml written; must be pushed to GitHub to verify green — pending user)*
 - [x] `Organization` and `User` models + Alembic migration *(full 9-table initial migration `cc9a63fd79ed`, rollback-tested 2026-11-03)*

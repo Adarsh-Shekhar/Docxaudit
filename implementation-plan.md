@@ -494,21 +494,22 @@
 ---
 
 ### Phase 14 — Frontend Foundation & Routing
+> **Status (2026-11-17):** Done — Vite React-TS + Tailwind 3, path alias `@/`; single axios client (`api/client.ts`) with JWT injection, 401→refresh-once→logout; React Router with auth guards (redirect-to-login remembering `from`); AppShell with nav + user menu + **persistent non-dismissible disclaimer banner (R-1)**; TanStack Query v5; ErrorBoundary + loading/empty/error-state components; hand-mirrored types in `src/types/api.ts`; ESLint 9 flat config + Prettier; `tsc --noEmit` + `vite build` pass. Note: TypeScript pinned to ~5.9 (typescript-eslint 8 doesn't support the TS 7 native port).
 **Implements:** TRD §2.1; blueprint structure
 **Milestone:** M1
 
 **Objective:** Scaffold the React + Vite + Tailwind app with routing, a single typed API client layer, and shared layout/auth guards.
 
 **Tasks:**
-- [ ] 14.1 Initialize Vite React-TS project; configure Tailwind; set up path aliases.
-- [ ] 14.2 Folder structure per blueprint: `components/`, `pages/`, `api/`, `hooks/`.
-- [ ] 14.3 `api/client.ts`: single typed API client (axios or fetch wrapper) with base URL from env, JWT injection from storage, 401 → refresh/logout handling. All API calls go through here (rules Part B).
-- [ ] 14.4 Routing (React Router): public routes (login, register), protected routes (dashboard, documents, tasks, calendar, notifications). Auth guard redirects unauthenticated users.
-- [ ] 14.5 Shared layout: app shell with nav, org name, user menu, persistent disclaimer banner (R-1) — non-dismissible by default.
-- [ ] 14.6 TanStack Query setup: `QueryClient` with sensible defaults; devtools in dev.
-- [ ] 14.7 Global loading/error boundary components.
-- [ ] 14.8 Type definitions mirroring backend Pydantic schemas (keep in sync; consider generating from OpenAPI later — manual for v1).
-- [ ] 14.9 Lint/format: ESLint + Prettier; `tsc --noEmit` in CI.
+- [x] 14.1 Initialize Vite React-TS project; configure Tailwind; set up path aliases.
+- [x] 14.2 Folder structure per blueprint: `components/`, `pages/`, `api/`, `hooks/`.
+- [x] 14.3 `api/client.ts`: single typed API client (axios or fetch wrapper) with base URL from env, JWT injection from storage, 401 → refresh/logout handling. All API calls go through here (rules Part B).
+- [x] 14.4 Routing (React Router): public routes (login, register), protected routes (dashboard, documents, tasks, calendar, notifications). Auth guard redirects unauthenticated users.
+- [x] 14.5 Shared layout: app shell with nav, org name, user menu, persistent disclaimer banner (R-1) — non-dismissible by default.
+- [x] 14.6 TanStack Query setup: `QueryClient` with sensible defaults; devtools in dev.
+- [x] 14.7 Global loading/error boundary components.
+- [x] 14.8 Type definitions mirroring backend Pydantic schemas (keep in sync; consider generating from OpenAPI later — manual for v1).
+- [x] 14.9 Lint/format: ESLint + Prettier; `tsc --noEmit` in CI.
 
 **Deliverables:** Running FE skeleton with routing, typed API client, auth guard, disclaimer banner.
 
@@ -521,17 +522,18 @@
 ---
 
 ### Phase 15 — Authentication UI
+> **Status (2026-11-17):** Done — Login/Register pages with client validation (email regex, password ≥8 mirroring backend), loading/error states; tokens in localStorage (trade-off documented in `useAuth.tsx`; httpOnly cookies are a hardening stretch); logout clears tokens + query cache. Backend addition: `GET /users/me` for the app shell. 6 Vitest+RTL tests. **Live-verified in browser:** register → redirect → banner + user menu.
 **Implements:** FR-5.2
 **Milestone:** M1
 
 **Objective:** Login and registration pages wired to the backend auth endpoints.
 
 **Tasks:**
-- [ ] 15.1 `pages/Login.tsx`, `pages/Register.tsx`: forms with validation (email format, password min length), loading + error states (rules Part B).
-- [ ] 15.2 Token storage: access token in memory (or httpOnly cookie if backend supports — v1 uses localStorage for simplicity; document the XSS trade-off and that httpOnly cookies are a hardening stretch goal). Refresh token handling.
-- [ ] 15.3 On login success, store tokens, redirect to dashboard; on 401, clear and redirect to login.
-- [ ] 15.4 Logout action clears tokens and query cache.
-- [ ] 15.5 Tests (Vitest + RTL): form validation errors render; successful login redirects; failed login shows error message.
+- [x] 15.1 `pages/Login.tsx`, `pages/Register.tsx`: forms with validation (email format, password min length), loading + error states (rules Part B).
+- [x] 15.2 Token storage: access token in memory (or httpOnly cookie if backend supports — v1 uses localStorage for simplicity; document the XSS trade-off and that httpOnly cookies are a hardening stretch goal). Refresh token handling.
+- [x] 15.3 On login success, store tokens, redirect to dashboard; on 401, clear and redirect to login.
+- [x] 15.4 Logout action clears tokens and query cache.
+- [x] 15.5 Tests (Vitest + RTL): form validation errors render; successful login redirects; failed login shows error message.
 
 **Deliverables:** Login/register pages + tests.
 
@@ -542,18 +544,19 @@
 ---
 
 ### Phase 16 — Document Upload & Status UI
+> **Status (2026-11-17):** Done — drag-drop upload with client validation (PDF/DOCX, ≤25 MB) + progress bar; documents table with status badges; Extract triggers `POST /extract` + 2s polling (refetchInterval) until terminal, showing "Extracting clause N of M"; failed shows error + Extract-as-retry; empty/loading states. 5 tests. **Live-verified in browser:** upload → extract → graceful `failed` (no GROQ key) with error + retry.
 **Implements:** FR-1.1, FR-1.6
 **Milestone:** M1
 
 **Objective:** Let users upload PDF/DOCX, see upload progress, trigger extraction, and poll extraction status with a visible progress indicator.
 
 **Tasks:**
-- [ ] 16.1 `components/DocumentUpload.tsx`: drag-and-drop or file picker; client-side format validation (PDF/DOCX); size limit; upload progress bar.
-- [ ] 16.2 `pages/Documents.tsx`: list of org documents with status badges; upload button; per-document "Extract" action.
-- [ ] 16.3 Extraction trigger + polling: on "Extract", call `POST /documents/{id}/extract`, then poll `GET /documents/{id}/status` every 2s (TanStack Query `refetchInterval`) until `completed`/`failed`; show stage + progress ("Extracting clause 3 of 9").
-- [ ] 16.4 Error handling: failed extraction shows error message + "Retry" button.
-- [ ] 16.5 Empty states and loading states for the document list.
-- [ ] 16.6 Tests: upload flow renders progress; status polling stops on completion; error state shows retry.
+- [x] 16.1 `components/DocumentUpload.tsx`: drag-and-drop or file picker; client-side format validation (PDF/DOCX); size limit; upload progress bar.
+- [x] 16.2 `pages/Documents.tsx`: list of org documents with status badges; upload button; per-document "Extract" action.
+- [x] 16.3 Extraction trigger + polling: on "Extract", call `POST /documents/{id}/extract`, then poll `GET /documents/{id}/status` every 2s (TanStack Query `refetchInterval`) until `completed`/`failed`; show stage + progress ("Extracting clause 3 of 9").
+- [x] 16.4 Error handling: failed extraction shows error message + "Retry" button.
+- [x] 16.5 Empty states and loading states for the document list.
+- [x] 16.6 Tests: upload flow renders progress; status polling stops on completion; error state shows retry.
 
 **Deliverables:** Document upload + extraction status UI + tests.
 
@@ -564,18 +567,19 @@
 ---
 
 ### Phase 17 — PDF Viewer & Highlight Overlay
+> **Status (2026-11-17):** Done — **decision implemented per plan 17.2: bbox stored at parse time from PyMuPDF** (`search_for` normalized whole-chunk search with per-line fallback) → new `ExtractedClause.bbox` JSON column (migration `1483c40a4b8d`, round-trip tested) → exposed via clauses API. Frontend: `DocumentViewer` (react-pdf + Vite `?url` worker, paginated not virtualized for perf 17.5) with percentage-based highlight overlay; clause selection syncs viewer to the clause's page; clicking a highlight selects the clause; DOCX renders a highlighted text view backed by new `GET /documents/{id}/text` (citation offsets index exactly into that string — verified by test). 6 backend tests + 7 viewer tests. Full viewer+highlight demo pending GROQ key (needs extracted clauses); viewer rendering verified live without console errors.
 **Implements:** FR-2.1, FR-2.2, TRD §2.1
 **Milestone:** M1 (Alpha-critical)
 
 **Objective:** Render the original PDF and draw highlight boxes over extracted spans when a clause is selected — the trust-building feature (US-2).
 
 **Tasks:**
-- [ ] 17.1 `components/DocumentViewer.tsx` using `react-pdf`: render all pages (or paginated) with a worker; handle load/error states.
-- [ ] 17.2 Highlight overlay: for a selected clause, compute the bounding box of `char_start..char_end` on `page_number` and render an absolutely-positioned highlight div over the PDF page. PyMuPDF provides word/char bounding boxes — store them at parse time (extend `Chunk`/`ExtractedClause` with `bbox` if needed) OR compute on the frontend via pdf.js text layer. Decision: store `bbox` (x0,y0,x1,y1 in PDF points) from PyMuPDF at parse time and pass through to the clause; simpler and more reliable. Document this.
-- [ ] 17.3 Sync: selecting a clause in the list scrolls the viewer to its page and highlights; clicking a highlight selects the clause.
-- [ ] 17.4 For DOCX: render as extracted text (not a PDF) with inline highlights, since pdf.js can't render DOCX. Document this limitation; optionally convert DOCX→PDF server-side (LibreOffice) is out of scope (C-7). Use a text view with highlighted spans.
-- [ ] 17.5 Performance: virtualize pages if needed; keep viewer responsive during extraction polling.
-- [ ] 17.6 Tests: viewer renders; highlight appears when clause selected (RTL + mocked pdf.js).
+- [x] 17.1 `components/DocumentViewer.tsx` using `react-pdf`: render all pages (or paginated) with a worker; handle load/error states.
+- [x] 17.2 Highlight overlay: for a selected clause, compute the bounding box of `char_start..char_end` on `page_number` and render an absolutely-positioned highlight div over the PDF page. PyMuPDF provides word/char bounding boxes — store them at parse time (extend `Chunk`/`ExtractedClause` with `bbox` if needed) OR compute on the frontend via pdf.js text layer. Decision: store `bbox` (x0,y0,x1,y1 in PDF points) from PyMuPDF at parse time and pass through to the clause; simpler and more reliable. Document this.
+- [x] 17.3 Sync: selecting a clause in the list scrolls the viewer to its page and highlights; clicking a highlight selects the clause.
+- [x] 17.4 For DOCX: render as extracted text (not a PDF) with inline highlights, since pdf.js can't render DOCX. Document this limitation; optionally convert DOCX→PDF server-side (LibreOffice) is out of scope (C-7). Use a text view with highlighted spans.
+- [x] 17.5 Performance: virtualize pages if needed; keep viewer responsive during extraction polling.
+- [x] 17.6 Tests: viewer renders; highlight appears when clause selected (RTL + mocked pdf.js).
 
 **Deliverables:** Document viewer with highlight overlay + tests.
 

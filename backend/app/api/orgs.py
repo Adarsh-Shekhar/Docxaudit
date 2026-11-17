@@ -65,6 +65,16 @@ def get_org_audit(
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
+@users_router.get("/me", response_model=UserResponse)
+def get_current_user_profile(user: CurrentUser) -> UserResponse:
+    """Current user's own profile (used by the frontend app shell, Phase 14).
+
+    Must be declared BEFORE the `/{user_id}`-style routes so `/me` is not
+    captured as an id.
+    """
+    return UserResponse.model_validate(user)
+
+
 @users_router.get("", response_model=list[UserResponse])
 def list_org_members(user: CurrentUser, db: DbSession) -> list[UserResponse]:
     """List org members — scoped to the caller's organization (5.2)."""

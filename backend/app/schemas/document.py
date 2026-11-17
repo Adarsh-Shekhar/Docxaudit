@@ -25,6 +25,16 @@ class UploadResponse(DocumentResponse):
     """Same shape as DocumentResponse; explicit alias for upload UX."""
 
 
+class DocumentTextResponse(BaseModel):
+    """Full extracted text (Phase 17.4) — citation offsets index into `text`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    filename: str
+    mime_type: str
+    text: str
+
+
 class ExtractionStatusResponse(BaseModel):
     """Extraction job status (Phase 12)."""
 

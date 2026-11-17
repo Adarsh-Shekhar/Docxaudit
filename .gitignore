@@ -44,3 +44,7 @@ Thumbs.db
 *.pg_dump
 *.dump
 *.sql.gz
+
+# Smoke-test artifacts (local SQLite + uploads from UI smoke runs)
+smoke_backend.db*
+smoke_uploads/

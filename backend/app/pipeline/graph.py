@@ -161,17 +161,23 @@ def build_graph(
                 for record in state["extractions"]:
                     citation = record["citation"]
                     assert citation is not None  # score_node guarantees
+                    chunk = record["chunk"]
+                    bbox = None
+                    if chunk.bbox is not None:
+                        x0, y0, x1, y1 = chunk.bbox
+                        bbox = {"x0": x0, "y0": y0, "x1": x1, "y1": y1}
                     db.add(
                         ExtractedClause(
                             document_id=uuid.UUID(state["document_id"]),
                             obligation_type=ObligationType(record["result"].obligation_type),
                             plain_language_text=record["result"].plain_language_summary,
-                            raw_source_text=record["chunk"].text,
+                            raw_source_text=chunk.text,
                             page_number=citation["page_number"],
                             char_start=int(citation["char_start"]),
                             char_end=int(citation["char_end"]),
                             confidence_score=float(record["composite"]),
                             status=ClauseStatus.PENDING,
+                            bbox=bbox,
                         )
                     )
                     clauses += 1

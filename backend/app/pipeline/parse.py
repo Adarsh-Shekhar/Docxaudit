@@ -31,6 +31,15 @@ class Chunk:
     char_end: int  # exclusive
     document_id: str = ""
     extra: dict[str, object] = field(default_factory=dict)
+    """PDF bounding box of the chunk text in PDF points (x0, y0, x1, y1).
+
+    Phase 17.2 decision: computed ONCE here at parse time via PyMuPDF
+    (reliable word coordinates) and stored through to ExtractedClause —
+    computing on the frontend via a pdf.js text layer is less reliable.
+    None for DOCX chunks and whenever the box cannot be located (the
+    frontend then falls back to the text view).
+    """
+    bbox: tuple[float, float, float, float] | None = None
 
 
 def parse_pdf(file_bytes: bytes) -> list[Chunk]:
@@ -58,6 +67,7 @@ def parse_pdf(file_bytes: bytes) -> list[Chunk]:
                             page_number=page_number,
                             char_start=offset,
                             char_end=offset + len(paragraph),
+                            bbox=_locate_bbox(page, paragraph),
                         )
                     )
                     offset += len(paragraph)
@@ -99,6 +109,46 @@ def parse_docx(file_bytes: bytes) -> list[Chunk]:
             )
             offset += len(chunk_text)
     return chunks
+
+
+def _locate_bbox(page: pymupdf.Page, paragraph: str) -> tuple[float, float, float, float] | None:
+    """Locate a paragraph's bounding box on `page` (Phase 17.2).
+
+    PyMuPDF `search_for` normalizes whitespace, so multi-line chunks still
+    match. Strategy: normalized whole-chunk search first; per-line fallback
+    for chunks spanning layout oddities. Returns None when nothing matches
+    (the clause then simply has no visual highlight).
+    """
+    body = paragraph.strip()
+    if not body:
+        return None
+    try:
+        rects = page.search_for(body)
+        if not rects:
+            lines = [line.strip() for line in body.split("\n") if line.strip()]
+            found: list[pymupdf.Rect] = []
+            for line in lines:
+                found.extend(page.search_for(line))
+            rects = found
+        if not rects:
+            return None
+        union = rects[0]
+        for rect in rects[1:]:
+            union |= rect
+        return (union.x0, union.y0, union.x1, union.y1)
+    except Exception:  # noqa: BLE001 — bbox is best-effort; never fail parsing
+        return None
+
+
+def extract_full_text(chunks: list[Chunk]) -> str:
+    """The canonical full text the citation offsets point into.
+
+    Chunks absorb their separators by construction, so this is exactly
+    `"".join(chunks)` for both PDF (matches raw page texts) and DOCX
+    (skipped empty paragraphs contribute no offset — see parse_docx).
+    Used by the text-view endpoint (Phase 17.4) and verification tests.
+    """
+    return "".join(chunk.text for chunk in chunks)
 
 
 def reconstruct_text(chunks: list[Chunk], separators: dict[int, str] | None = None) -> str:

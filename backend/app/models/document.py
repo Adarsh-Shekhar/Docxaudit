@@ -29,6 +29,14 @@ class Document(Base):
         Uuid(), ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Extraction job status (Phase 12.3)
+    extraction_status: Mapped[str] = mapped_column(
+        String(31), nullable=False, default="not_started", index=True
+    )
+    extraction_progress_done: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    extraction_progress_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    extraction_error: Mapped[str | None] = mapped_column(String(1023), nullable=True)
+
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
